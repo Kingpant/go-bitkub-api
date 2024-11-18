@@ -1,10 +1,8 @@
 package types
 
-type PaginationDetail struct {
+type DepositWithdrawPaginationDetail struct {
 	Page uint64 `json:"page"`
 	Last uint64 `json:"last"`
-	Next uint64 `json:"next"`
-	Prev uint64 `json:"prev"`
 }
 
 type WithdrawHistory struct {
@@ -22,9 +20,9 @@ type WithdrawHistory struct {
 }
 
 type WithdrawHistoryResponse struct {
-	Error      uint64            `json:"error"`
-	Result     []WithdrawHistory `json:"result"`
-	Pagination PaginationDetail  `json:"pagination"`
+	Error      uint64                          `json:"error"`
+	Result     []WithdrawHistory               `json:"result"`
+	Pagination DepositWithdrawPaginationDetail `json:"pagination"`
 }
 
 type DepositHistory struct {
@@ -36,9 +34,9 @@ type DepositHistory struct {
 }
 
 type DepositHistoryResponse struct {
-	Error      uint64           `json:"error"`
-	Result     []DepositHistory `json:"result"`
-	Pagination PaginationDetail `json:"pagination"`
+	Error      uint64                          `json:"error"`
+	Result     []DepositHistory                `json:"result"`
+	Pagination DepositWithdrawPaginationDetail `json:"pagination"`
 }
 
 type OrderHistory struct {
@@ -61,8 +59,15 @@ type OrderHistory struct {
 	Ts              uint64 `json:"ts"`
 }
 
+type OrderPaginationDetail struct {
+	Page uint64 `json:"page"`
+	Last uint64 `json:"last"`
+	Next uint64 `json:"next"`
+	Prev uint64 `json:"prev"`
+}
+
 type OrderHistoryResponse struct {
-	Error      uint64           `json:"error"`
-	Result     []OrderHistory   `json:"result"`
-	Pagination PaginationDetail `json:"pagination"`
+	Error      uint64                `json:"error"`
+	Result     []OrderHistory        `json:"result"`
+	Pagination OrderPaginationDetail `json:"pagination"`
 }

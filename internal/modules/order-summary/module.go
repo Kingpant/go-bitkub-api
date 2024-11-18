@@ -56,6 +56,25 @@ func (o *orderSummary) GetOrderSummary(tokenSymbol string, startTimestamp *uint6
 		}
 	}
 
+	withdrawAmount := 0.0
+	withdrawHistories, err := o.bitkubApiClient.RequestWithdrawHistories(tokenSymbol)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, withdraw := range withdrawHistories {
+		amountFloat, _ := strconv.ParseFloat(withdraw.Amount, 64)
+		withdrawAmount += amountFloat
+	}
+
+	depositAmount := 0.0
+	depositHistories, err := o.bitkubApiClient.RequestDepositHistories(tokenSymbol)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, deposit := range depositHistories {
+		depositAmount += deposit.Amount
+	}
+
 	fmt.Println("====================================================")
 	fmt.Printf("Token %s remaining amount: %f\n", tokenSymbol, tokenRemainingAmount)
 	fmt.Printf("Total investment in fiat: %f\n", totalInvestmentFiat)
@@ -64,6 +83,8 @@ func (o *orderSummary) GetOrderSummary(tokenSymbol string, startTimestamp *uint6
 	} else {
 		fmt.Println("Average price per token: 0")
 	}
+	fmt.Printf("Total withdraw amount: %f\n", withdrawAmount)
+	fmt.Printf("Total deposit amount: %f\n", depositAmount)
 
 	if len(rateToFiatAmount) > 0 {
 		if err := writeToFile(tokenSymbol, rateToFiatAmount, rateToTokenAmount); err != nil {

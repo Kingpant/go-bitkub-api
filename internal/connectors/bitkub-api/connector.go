@@ -47,7 +47,7 @@ func (b *bitkubApiClient) RequestOrderHistories(tokenSymbol string, startTimesta
 			queryParma += fmt.Sprintf("&start=%d", *startTimestamp)
 		}
 
-		body, err := b.httpRequest(orderHistoryPath, queryParma)
+		body, err := b.httpRequest(orderHistoryPath, queryParma, "GET")
 		if err != nil {
 			return nil, err
 		}
@@ -56,6 +56,9 @@ func (b *bitkubApiClient) RequestOrderHistories(tokenSymbol string, startTimesta
 		err = json.Unmarshal(body, &orderHistoryResponse)
 		if err != nil {
 			return nil, err
+		}
+		if orderHistoryResponse.Error != 0 {
+			return nil, fmt.Errorf("request order histories error code: %d", orderHistoryResponse.Error)
 		}
 
 		orderHistories = append(orderHistories, orderHistoryResponse.Result...)
@@ -70,7 +73,7 @@ func (b *bitkubApiClient) RequestOrderHistories(tokenSymbol string, startTimesta
 }
 
 func (b *bitkubApiClient) RequestDepositHistories(tokenSymbol string) ([]types.DepositHistory, error) {
-	tokenSymbol = strings.ToLower(tokenSymbol)
+	tokenSymbol = strings.ToUpper(tokenSymbol)
 	page := uint64(1)
 	limit := "100"
 	depositHistories := []types.DepositHistory{}
@@ -79,7 +82,7 @@ func (b *bitkubApiClient) RequestDepositHistories(tokenSymbol string) ([]types.D
 		depositHistoryPath := "/api/v3/crypto/deposit-history"
 		queryParma := fmt.Sprintf("?p=%d&lmt=%s", page, limit)
 
-		body, err := b.httpRequest(depositHistoryPath, queryParma)
+		body, err := b.httpRequest(depositHistoryPath, queryParma, "POST")
 		if err != nil {
 			return nil, err
 		}
@@ -89,6 +92,9 @@ func (b *bitkubApiClient) RequestDepositHistories(tokenSymbol string) ([]types.D
 		if err != nil {
 			return nil, err
 		}
+		if depositHistoryResponse.Error != 0 {
+			return nil, fmt.Errorf("request deposit histories error code: %d", depositHistoryResponse.Error)
+		}
 
 		for _, depositHistory := range depositHistoryResponse.Result {
 			if depositHistory.Currency == tokenSymbol {
@@ -96,7 +102,7 @@ func (b *bitkubApiClient) RequestDepositHistories(tokenSymbol string) ([]types.D
 			}
 		}
 
-		if depositHistoryResponse.Pagination.Last == page {
+		if depositHistoryResponse.Pagination.Last == 0 {
 			break
 		}
 		page++
@@ -106,7 +112,7 @@ func (b *bitkubApiClient) RequestDepositHistories(tokenSymbol string) ([]types.D
 }
 
 func (b *bitkubApiClient) RequestWithdrawHistories(tokenSymbol string) ([]types.WithdrawHistory, error) {
-	tokenSymbol = strings.ToLower(tokenSymbol)
+	tokenSymbol = strings.ToUpper(tokenSymbol)
 	page := uint64(1)
 	limit := "100"
 	withdrawHistories := []types.WithdrawHistory{}
@@ -115,7 +121,7 @@ func (b *bitkubApiClient) RequestWithdrawHistories(tokenSymbol string) ([]types.
 		withdrawHistoryPath := "/api/v3/crypto/withdraw-history"
 		queryParma := fmt.Sprintf("?p=%d&lmt=%s", page, limit)
 
-		body, err := b.httpRequest(withdrawHistoryPath, queryParma)
+		body, err := b.httpRequest(withdrawHistoryPath, queryParma, "POST")
 		if err != nil {
 			return nil, err
 		}
@@ -125,14 +131,17 @@ func (b *bitkubApiClient) RequestWithdrawHistories(tokenSymbol string) ([]types.
 		if err != nil {
 			return nil, err
 		}
+		if withdrawHistoryResponse.Error != 0 {
+			return nil, fmt.Errorf("request withdraw histories error code: %d", withdrawHistoryResponse.Error)
+		}
 
-		for _, depositHistory := range withdrawHistoryResponse.Result {
-			if depositHistory.Currency == tokenSymbol {
-				withdrawHistories = append(withdrawHistories, depositHistory)
+		for _, withdrawHistory := range withdrawHistoryResponse.Result {
+			if withdrawHistory.Currency == tokenSymbol {
+				withdrawHistories = append(withdrawHistories, withdrawHistory)
 			}
 		}
 
-		if withdrawHistoryResponse.Pagination.Last == page {
+		if withdrawHistoryResponse.Pagination.Last == 0 {
 			break
 		}
 		page++
@@ -141,10 +150,9 @@ func (b *bitkubApiClient) RequestWithdrawHistories(tokenSymbol string) ([]types.
 	return withdrawHistories, nil
 }
 
-func (b *bitkubApiClient) httpRequest(path, queryParam string) ([]byte, error) {
+func (b *bitkubApiClient) httpRequest(path, queryParam, method string) ([]byte, error) {
 	nowMilliSec := time.Now().UnixMilli()
 	nowMilliSecStr := strconv.FormatInt(nowMilliSec, 10)
-	method := "GET"
 	payload := nowMilliSecStr + method + path + queryParam
 
 	signature := b.genSignature(payload)
