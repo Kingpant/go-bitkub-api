@@ -7,6 +7,26 @@ type PaginationDetail struct {
 	Prev uint64 `json:"prev"`
 }
 
+type WithdrawHistory struct {
+	TxnId    string  `json:"txn_id"`
+	ExtRef   string  `json:"ext_ref"`
+	Hash     string  `json:"hash"`
+	Currency string  `json:"currency"`
+	Amount   string  `json:"amount"`
+	Fee      float64 `json:"fee"`
+	Address  string  `json:"address"`
+	Memo     string  `json:"memo"`
+	Status   string  `json:"status"`
+	Note     string  `json:"note"`
+	Time     uint64  `json:"time"`
+}
+
+type WithdrawHistoryResponse struct {
+	Error      uint64            `json:"error"`
+	Result     []WithdrawHistory `json:"result"`
+	Pagination PaginationDetail  `json:"pagination"`
+}
+
 type DepositHistory struct {
 	TxnId    string  `json:"txn_id"`
 	Currency string  `json:"currency"`

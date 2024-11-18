@@ -17,6 +17,7 @@ import (
 type IBitkubApiClient interface {
 	RequestOrderHistories(tokenSymbol string, startTimestamp *uint64) ([]types.OrderHistory, error)
 	RequestDepositHistories(tokenSymbol string) ([]types.DepositHistory, error)
+	RequestWithdrawHistories(tokenSymbol string) ([]types.WithdrawHistory, error)
 }
 
 type bitkubApiClient struct {
@@ -33,48 +34,15 @@ func NewBitkubApiClient(baseUrl, apiKey, apiSecret string) IBitkubApiClient {
 	}
 }
 
-func (b *bitkubApiClient) RequestDepositHistories(tokenSymbol string) ([]types.DepositHistory, error) {
-	tokenSymbol = strings.ToLower(tokenSymbol)
-	page := "1"
-	limit := "100"
-	depositHistories := []types.DepositHistory{}
-
-	for {
-		depositHistoryPath := "/api/v3/crypto/deposit-history"
-		queryParma := fmt.Sprintf("?sym=%s_thb&p=%s&lmt=%s", tokenSymbol, page, limit)
-
-		body, err := b.httpRequest(depositHistoryPath, queryParma)
-		if err != nil {
-			return nil, err
-		}
-
-		depositHistoryResponse := types.DepositHistoryResponse{}
-		err = json.Unmarshal(body, &depositHistoryResponse)
-		if err != nil {
-			return nil, err
-		}
-
-		depositHistories = append(depositHistories, depositHistoryResponse.Result...)
-
-		if depositHistoryResponse.Pagination.Next == 0 {
-			break
-		}
-
-		page = strconv.FormatUint(depositHistoryResponse.Pagination.Next, 10)
-	}
-
-	return depositHistories, nil
-}
-
 func (b *bitkubApiClient) RequestOrderHistories(tokenSymbol string, startTimestamp *uint64) ([]types.OrderHistory, error) {
 	tokenSymbol = strings.ToLower(tokenSymbol)
-	page := "1"
+	page := uint64(1)
 	limit := "100"
 	orderHistories := []types.OrderHistory{}
 
 	for {
 		orderHistoryPath := "/api/v3/market/my-order-history"
-		queryParma := fmt.Sprintf("?sym=%s_thb&p=%s&lmt=%s", tokenSymbol, page, limit)
+		queryParma := fmt.Sprintf("?sym=%s_thb&p=%d&lmt=%s", tokenSymbol, page, limit)
 		if startTimestamp != nil {
 			queryParma += fmt.Sprintf("&start=%d", *startTimestamp)
 		}
@@ -95,10 +63,82 @@ func (b *bitkubApiClient) RequestOrderHistories(tokenSymbol string, startTimesta
 		if orderHistoryResponse.Pagination.Next == 0 {
 			break
 		}
-		page = strconv.FormatUint(orderHistoryResponse.Pagination.Next, 10)
+		page = orderHistoryResponse.Pagination.Next
 	}
 
 	return orderHistories, nil
+}
+
+func (b *bitkubApiClient) RequestDepositHistories(tokenSymbol string) ([]types.DepositHistory, error) {
+	tokenSymbol = strings.ToLower(tokenSymbol)
+	page := uint64(1)
+	limit := "100"
+	depositHistories := []types.DepositHistory{}
+
+	for {
+		depositHistoryPath := "/api/v3/crypto/deposit-history"
+		queryParma := fmt.Sprintf("?p=%d&lmt=%s", page, limit)
+
+		body, err := b.httpRequest(depositHistoryPath, queryParma)
+		if err != nil {
+			return nil, err
+		}
+
+		depositHistoryResponse := types.DepositHistoryResponse{}
+		err = json.Unmarshal(body, &depositHistoryResponse)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, depositHistory := range depositHistoryResponse.Result {
+			if depositHistory.Currency == tokenSymbol {
+				depositHistories = append(depositHistories, depositHistory)
+			}
+		}
+
+		if depositHistoryResponse.Pagination.Last == page {
+			break
+		}
+		page++
+	}
+
+	return depositHistories, nil
+}
+
+func (b *bitkubApiClient) RequestWithdrawHistories(tokenSymbol string) ([]types.WithdrawHistory, error) {
+	tokenSymbol = strings.ToLower(tokenSymbol)
+	page := uint64(1)
+	limit := "100"
+	withdrawHistories := []types.WithdrawHistory{}
+
+	for {
+		withdrawHistoryPath := "/api/v3/crypto/withdraw-history"
+		queryParma := fmt.Sprintf("?p=%d&lmt=%s", page, limit)
+
+		body, err := b.httpRequest(withdrawHistoryPath, queryParma)
+		if err != nil {
+			return nil, err
+		}
+
+		withdrawHistoryResponse := types.WithdrawHistoryResponse{}
+		err = json.Unmarshal(body, &withdrawHistoryResponse)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, depositHistory := range withdrawHistoryResponse.Result {
+			if depositHistory.Currency == tokenSymbol {
+				withdrawHistories = append(withdrawHistories, depositHistory)
+			}
+		}
+
+		if withdrawHistoryResponse.Pagination.Last == page {
+			break
+		}
+		page++
+	}
+
+	return withdrawHistories, nil
 }
 
 func (b *bitkubApiClient) httpRequest(path, queryParam string) ([]byte, error) {
