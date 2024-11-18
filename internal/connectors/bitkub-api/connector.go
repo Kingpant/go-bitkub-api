@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -33,6 +34,7 @@ func NewBitkubApiClient(baseUrl, apiKey, apiSecret string) IBitkubApiClient {
 }
 
 func (b *bitkubApiClient) RequestDepositHistories(tokenSymbol string) ([]types.DepositHistory, error) {
+	tokenSymbol = strings.ToLower(tokenSymbol)
 	page := "1"
 	limit := "100"
 	depositHistories := []types.DepositHistory{}
@@ -65,6 +67,7 @@ func (b *bitkubApiClient) RequestDepositHistories(tokenSymbol string) ([]types.D
 }
 
 func (b *bitkubApiClient) RequestOrderHistories(tokenSymbol string, startTimestamp *uint64) ([]types.OrderHistory, error) {
+	tokenSymbol = strings.ToLower(tokenSymbol)
 	page := "1"
 	limit := "100"
 	orderHistories := []types.OrderHistory{}
