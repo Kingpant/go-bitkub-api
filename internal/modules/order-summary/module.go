@@ -65,7 +65,7 @@ func (o *orderSummary) GetOrderSummary(tokenSymbol string, startTimestamp *uint6
 		fmt.Println("Average price per token: 0")
 	}
 
-	if len(rateToFiatAmount) == 0 {
+	if len(rateToFiatAmount) > 0 {
 		if err := writeToFile(tokenSymbol, rateToFiatAmount, rateToTokenAmount); err != nil {
 			return nil, nil, err
 		}
