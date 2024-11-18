@@ -87,6 +87,11 @@ func writeToFile(tokenSymbol string, rateToFiatAmount map[float64]float64, rateT
 		fileContent += fmt.Sprintf("%f,%f,%f\n", key, rateToFiatAmount[key], rateToTokenAmount[key])
 	}
 
+	// Ensure the directory exists
+	if err := os.MkdirAll("./reports", os.ModePerm); err != nil {
+		return err
+	}
+
 	// write to file
 	file, err := os.Create(fmt.Sprintf("./reports/%s_order_summary.csv", tokenSymbol))
 	if err != nil {
