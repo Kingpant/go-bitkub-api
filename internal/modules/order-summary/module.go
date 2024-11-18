@@ -59,11 +59,16 @@ func (o *orderSummary) GetOrderSummary(tokenSymbol string, startTimestamp *uint6
 	fmt.Println("====================================================")
 	fmt.Printf("Token %s remaining amount: %f\n", tokenSymbol, tokenRemainingAmount)
 	fmt.Printf("Total investment in fiat: %f\n", totalInvestmentFiat)
-	fmt.Println("Average price per token: ", totalInvestmentFiat/tokenRemainingAmount)
+	if tokenRemainingAmount > 0 {
+		fmt.Println("Average price per token: ", totalInvestmentFiat/tokenRemainingAmount)
+	} else {
+		fmt.Println("Average price per token: 0")
+	}
 
-	// write to csv file
-	if err := writeToFile(tokenSymbol, rateToFiatAmount, rateToTokenAmount); err != nil {
-		return nil, nil, err
+	if len(rateToFiatAmount) == 0 {
+		if err := writeToFile(tokenSymbol, rateToFiatAmount, rateToTokenAmount); err != nil {
+			return nil, nil, err
+		}
 	}
 
 	return rateToFiatAmount, rateToTokenAmount, nil
