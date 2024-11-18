@@ -16,7 +16,7 @@ func main() {
 
 	tokenSymbols := strings.Split(config.Tokens, ",")
 	for _, tokenSymbol := range tokenSymbols {
-		_, _, err := orderSummaryModule.GetOrderSummary(tokenSymbol, config.StartTimestamp)
+		_, err := orderSummaryModule.GetOrderSummary(tokenSymbol, config.StartTimestamp)
 		if err != nil {
 			panic(err)
 		}

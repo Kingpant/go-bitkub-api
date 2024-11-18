@@ -8,7 +8,7 @@ import (
 )
 
 type IOrderSummary interface {
-	GetOrderSummary(tokenSymbol string, startTimestamp *uint64) (rateToFiatAmount map[float64]float64, rateToTokenAmount map[float64]float64, err error)
+	GetOrderSummary(tokenSymbol string, startTimestamp *uint64) (GetOrderSummaryResponse, error)
 }
 
 type orderSummary struct {
@@ -21,14 +21,23 @@ func NewOrderSummary(bitkubApiClient bitkubapi.IBitkubApiClient) IOrderSummary {
 	}
 }
 
-func (o *orderSummary) GetOrderSummary(tokenSymbol string, startTimestamp *uint64) (map[float64]float64, map[float64]float64, error) {
+type GetOrderSummaryResponse struct {
+	RateToFiatAmountBuy   map[float64]float64
+	RateToTokenAmountBuy  map[float64]float64
+	RateToFiatAmountSell  map[float64]float64
+	RateToTokenAmountSell map[float64]float64
+}
+
+func (o *orderSummary) GetOrderSummary(tokenSymbol string, startTimestamp *uint64) (GetOrderSummaryResponse, error) {
 	orderHistories, err := o.bitkubApiClient.RequestOrderHistories(tokenSymbol, startTimestamp)
 	if err != nil {
-		return nil, nil, err
+		return GetOrderSummaryResponse{}, err
 	}
 
-	rateToFiatAmount := map[float64]float64{}
-	rateToTokenAmount := map[float64]float64{}
+	rateToFiatAmountBuy := map[float64]float64{}
+	rateToTokenAmountBuy := map[float64]float64{}
+	rateToFiatAmountSell := map[float64]float64{}
+	rateToTokenAmountSell := map[float64]float64{}
 	tokenRemainingAmount := 0.0
 	totalInvestmentFiat := 0.0
 	for _, order := range orderHistories {
@@ -43,16 +52,16 @@ func (o *orderSummary) GetOrderSummary(tokenSymbol string, startTimestamp *uint6
 			tokenRemainingAmount += tokenAmount
 			totalInvestmentFiat += amountFloat
 
-			rateToFiatAmount[rateFloat] += fiatAmount
-			rateToTokenAmount[rateFloat] += tokenAmount
+			rateToFiatAmountBuy[rateFloat] += fiatAmount
+			rateToTokenAmountBuy[rateFloat] += tokenAmount
 		} else {
 			fiatAmount := amountFloat*rateFloat - feeFloat + creditFloat
 
 			totalInvestmentFiat -= fiatAmount
 			tokenRemainingAmount -= amountFloat
 
-			rateToFiatAmount[rateFloat] -= fiatAmount
-			rateToTokenAmount[rateFloat] -= amountFloat
+			rateToFiatAmountSell[rateFloat] += fiatAmount
+			rateToTokenAmountSell[rateFloat] += amountFloat
 		}
 	}
 
@@ -65,31 +74,28 @@ func (o *orderSummary) GetOrderSummary(tokenSymbol string, startTimestamp *uint6
 		fmt.Println("Average price per token: 0")
 	}
 
-	if len(rateToFiatAmount) > 0 {
-		if err := writeToFile(tokenSymbol, rateToFiatAmount, rateToTokenAmount); err != nil {
-			return nil, nil, err
+	if len(rateToFiatAmountBuy) > 0 || len(rateToFiatAmountSell) > 0 {
+		if err := writeToFile(tokenSymbol, rateToFiatAmountBuy, rateToTokenAmountBuy, rateToFiatAmountSell, rateToTokenAmountSell); err != nil {
+			return GetOrderSummaryResponse{}, err
 		}
 	}
 
-	return rateToFiatAmount, rateToTokenAmount, nil
+	return GetOrderSummaryResponse{
+		RateToFiatAmountBuy:   rateToFiatAmountBuy,
+		RateToTokenAmountBuy:  rateToTokenAmountBuy,
+		RateToFiatAmountSell:  rateToFiatAmountSell,
+		RateToTokenAmountSell: rateToTokenAmountSell,
+	}, nil
 }
 
-func writeToFile(tokenSymbol string, rateToFiatAmount map[float64]float64, rateToTokenAmount map[float64]float64) error {
-	keys := make([]float64, 0, len(rateToFiatAmount))
-	for k := range rateToFiatAmount {
-		keys = append(keys, k)
-	}
-	for i := 0; i < len(keys); i++ {
-		for j := i + 1; j < len(keys); j++ {
-			if keys[i] > keys[j] {
-				keys[i], keys[j] = keys[j], keys[i]
-			}
-		}
-	}
+func writeToFile(tokenSymbol string, rateToFiatAmountBuy, rateToTokenAmountBuy, rateToFiatAmountSell, rateToTokenAmountSell map[float64]float64) error {
+	fileContent := "rate,type,fiat_amount,token_amount\n"
 
-	fileContent := "rate,fiat_amount,token_amount\n"
-	for _, key := range keys {
-		fileContent += fmt.Sprintf("%f,%f,%f\n", key, rateToFiatAmount[key], rateToTokenAmount[key])
+	for rate, fiatAmount := range rateToFiatAmountBuy {
+		fileContent += fmt.Sprintf("%f,buy,%f,%f\n", rate, fiatAmount, rateToTokenAmountBuy[rate])
+	}
+	for rate, fiatAmount := range rateToFiatAmountSell {
+		fileContent += fmt.Sprintf("%f,sell,%f,%f\n", rate, fiatAmount, rateToTokenAmountSell[rate])
 	}
 
 	// Ensure the directory exists
